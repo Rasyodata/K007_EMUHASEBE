@@ -1,0 +1,14 @@
+# Render Blueprint — EMG MUHASEBE
+# Render bu dosyayı otomatik algılar (Blueprint / "Deploy from repo").
+services:
+  - type: web
+    name: emg-muhasebe
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/server.mjs
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20.20.2"

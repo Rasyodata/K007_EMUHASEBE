@@ -1,0 +1,38 @@
+{
+  "project_code": "K007_EMUHASEBE",
+  "project_name": "EMG MUHASEBE",
+  "project_slug": "EMG MUHASEBE",
+  "workspace_path": "/home/sevket/K007_EMUHASEBE",
+  "repository": null,
+  "technology": "node-pnpm-ts",
+  "template": "santiye",
+  "schema_version": 1,
+  "modules": [
+    {
+      "code": "CORE.AUTH",
+      "version": "1.0.0"
+    },
+    {
+      "code": "CORE.USERS",
+      "version": "1.0.0"
+    },
+    {
+      "code": "ACC.CARI",
+      "version": "1.0.0"
+    },
+    {
+      "code": "ACC.FATURA",
+      "version": "1.0.0"
+    },
+    {
+      "code": "ACC.ISLEM",
+      "version": "1.0.0"
+    },
+    {
+      "code": "ACC.KASA",
+      "version": "1.0.0"
+    }
+  ],
+  "extensions": [],
+  "integrations": []
+}
