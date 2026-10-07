@@ -69,8 +69,8 @@ function renderMenu() {
       a.dataset.route = pg.route; el.appendChild(a);
     }
   }
-  // user + logout footer
-  const uf = document.createElement("div"); uf.className = "grp"; uf.textContent = "Hesap"; el.appendChild(uf);
+  // user + logout footer (en altta sabit)
+  const uf = document.createElement("div"); uf.className = "grp account"; uf.textContent = "Hesap"; el.appendChild(uf);
   const ui = document.createElement("div"); ui.style.cssText = "font-size:12px;color:var(--muted);padding:4px 8px"; ui.textContent = (ROLE_ICON[USER?.role] || "👤") + " " + (USER?.name || USER?.email || "") + (USER?.role ? " · " + USER.role : ""); el.appendChild(ui);
   const lo = document.createElement("a"); lo.textContent = "Çıkış"; lo.onclick = async () => { await api("/api/auth/logout", { method: "POST" }).catch(()=>{}); localStorage.removeItem("token"); renderLogin(); }; el.appendChild(lo);
   openDashboard();
