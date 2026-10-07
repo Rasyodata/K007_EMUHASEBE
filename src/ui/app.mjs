@@ -26,7 +26,7 @@ async function quickLogin(email) {
 }
 
 async function renderLogin() {
-  document.querySelector("aside").style.display = "none";
+  document.getElementById("topbar").style.display = "none";
   const main = document.getElementById("main");
   main.innerHTML =
     "<div style='max-width:760px;margin:9vh auto;text-align:center'>" +
@@ -54,28 +54,21 @@ async function renderLogin() {
 }
 
 function renderMenu() {
-  document.querySelector("aside").style.display = "";
+  document.getElementById("topbar").style.display = "";
   const el = document.getElementById("menu");
   el.innerHTML = "";
-  const dh = document.createElement("div"); dh.className = "grp"; dh.textContent = "Panel"; el.appendChild(dh);
+  // Dashboard + tüm sayfa linkleri yatay üst barda.
   const da = document.createElement("a"); da.textContent = "📊 Dashboard"; da.dataset.route = "__dashboard"; da.onclick = openDashboard; el.appendChild(da);
-
-  const groups = {};
-  for (const p of META.pages) { (groups[menuParent(p.route)] ||= []).push(p); }
-  for (const [grp, pages] of Object.entries(groups)) {
-    const h = document.createElement("div"); h.className = "grp"; h.textContent = grp; el.appendChild(h);
-    for (const pg of pages) {
-      const a = document.createElement("a"); a.textContent = pg.title; a.onclick = () => openPage(pg);
-      a.dataset.route = pg.route; el.appendChild(a);
-    }
+  for (const pg of META.pages) {
+    const a = document.createElement("a"); a.textContent = pg.title; a.onclick = () => openPage(pg);
+    a.dataset.route = pg.route; el.appendChild(a);
   }
-  // user + logout footer (en altta sabit)
-  const uf = document.createElement("div"); uf.className = "grp account"; uf.textContent = "Hesap"; el.appendChild(uf);
-  const ui = document.createElement("div"); ui.style.cssText = "font-size:12px;color:var(--muted);padding:4px 8px"; ui.textContent = (ROLE_ICON[USER?.role] || "👤") + " " + (USER?.name || USER?.email || "") + (USER?.role ? " · " + USER.role : ""); el.appendChild(ui);
-  const lo = document.createElement("a"); lo.textContent = "Çıkış"; lo.onclick = async () => { await api("/api/auth/logout", { method: "POST" }).catch(()=>{}); localStorage.removeItem("token"); renderLogin(); }; el.appendChild(lo);
+  // Kullanıcı + Çıkış sağda.
+  const acc = document.getElementById("account"); acc.innerHTML = "";
+  const who = document.createElement("span"); who.className = "who"; who.textContent = (ROLE_ICON[USER?.role] || "👤") + " " + (USER?.name || USER?.email || "") + (USER?.role ? " · " + USER.role : ""); acc.appendChild(who);
+  const lo = document.createElement("a"); lo.textContent = "Çıkış"; lo.onclick = async () => { await api("/api/auth/logout", { method: "POST" }).catch(()=>{}); localStorage.removeItem("token"); renderLogin(); }; acc.appendChild(lo);
   openDashboard();
 }
-function menuParent(route){ const m = META.menu.find((x)=>x.route===route); return m?.parent || "Genel"; }
 
 const TRY = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 });
 function tileGrid(tiles, min) {
