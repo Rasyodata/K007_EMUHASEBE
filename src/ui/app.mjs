@@ -11,31 +11,46 @@ async function api(p, opts = {}) {
   return r.json();
 }
 
-function renderLogin(mode = "login") {
+const ROLE_ICON = {
+  "Yönetici": "👔", "Muhasebeci": "🧮", "Şantiye Şefi": "👷", "Tekniker": "🔧",
+  "Şantiye Güvenlik": "🛡️", "Sistem Yöneticisi": "🖥️", "Taşeron": "🤝",
+};
+
+async function quickLogin(email) {
+  const err = document.getElementById("err");
+  try {
+    const r = await api("/api/auth/quick-login", { method: "POST", body: JSON.stringify({ email }) });
+    if (r.token) { localStorage.setItem("token", r.token); boot(); }
+    else if (err) err.textContent = r.error || "giriş başarısız";
+  } catch (e) { if (err) err.textContent = "bağlantı hatası"; }
+}
+
+async function renderLogin() {
   document.querySelector("aside").style.display = "none";
   const main = document.getElementById("main");
   main.innerHTML =
-    "<div style='max-width:360px;margin:12vh auto'>" +
-    "<h2 style='text-align:center'>" + (mode === "login" ? "Giriş" : "Kayıt Ol") + "</h2>" +
-    "<div id='err' style='color:#ff6b6b;min-height:20px;text-align:center;font-size:13px'></div>" +
-    (mode === "register" ? "<input id='name' placeholder='Ad Soyad' style='margin-bottom:8px'/>" : "") +
-    "<input id='email' placeholder='E-posta' value='" + (mode==='login'?'admin@local':'') + "' style='margin-bottom:8px'/>" +
-    "<input id='pass' type='password' placeholder='Şifre' value='" + (mode==='login'?'admin123':'') + "' style='margin-bottom:12px'/>" +
-    "<button class='p' id='go' style='width:100%'>" + (mode === "login" ? "Giriş Yap" : "Kayıt Ol") + "</button>" +
-    "<p style='text-align:center;margin-top:12px'><a href='#' id='tog' style='color:var(--accent)'>" +
-    (mode === "login" ? "Hesabın yok mu? Kayıt ol" : "Zaten üye misin? Giriş yap") + "</a></p>" +
-    (mode === "login" ? "<p class=muted style='text-align:center;font-size:12px'>Varsayılan: admin@local / admin123</p>" : "") +
+    "<div style='max-width:760px;margin:9vh auto;text-align:center'>" +
+    "<h2 style='margin-bottom:4px'>EMG MUHASEBE</h2>" +
+    "<p class=muted style='margin-bottom:4px'>Rolünü seç ve gir — şifre gerekmez</p>" +
+    "<p style='display:inline-block;background:#3a2e00;color:#ffcf4d;font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:999px;margin-bottom:18px'>TEST GİRİŞİ</p>" +
+    "<div id='err' style='color:#ff6b6b;min-height:20px;font-size:13px'></div>" +
+    "<div id='roles' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:8px'></div>" +
     "</div>";
-  document.getElementById("tog").onclick = (e) => { e.preventDefault(); renderLogin(mode === "login" ? "register" : "login"); };
-  document.getElementById("go").onclick = async () => {
-    const body = { email: document.getElementById("email").value, password: document.getElementById("pass").value };
-    if (mode === "register") body.name = document.getElementById("name").value;
-    try {
-      const r = await api("/api/auth/" + (mode === "login" ? "login" : "register"), { method: "POST", body: JSON.stringify(body) });
-      if (r.token) { localStorage.setItem("token", r.token); boot(); }
-      else document.getElementById("err").textContent = r.error || "hata";
-    } catch (e) { document.getElementById("err").textContent = "bağlantı hatası"; }
-  };
+  let users = [];
+  try { const d = await api("/api/auth/roles"); users = d.users || []; } catch (e) { /* yoksa boş */ }
+  const grid = document.getElementById("roles");
+  if (!users.length) { grid.innerHTML = "<p class=muted>Rol kullanıcısı bulunamadı.</p>"; return; }
+  for (const u of users) {
+    const b = document.createElement("button");
+    b.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 12px;cursor:pointer;color:inherit;transition:border-color .15s";
+    b.onmouseover = () => b.style.borderColor = "var(--accent)";
+    b.onmouseout = () => b.style.borderColor = "var(--border)";
+    b.innerHTML = "<div style='font-size:30px'>" + (ROLE_ICON[u.role] || "👤") + "</div>" +
+      "<div style='font-weight:700;font-size:14px'>" + (u.role || u.name) + "</div>" +
+      "<div class=muted style='font-size:11px'>" + u.name + "</div>";
+    b.onclick = () => quickLogin(u.email);
+    grid.appendChild(b);
+  }
 }
 
 function renderMenu() {
@@ -56,7 +71,7 @@ function renderMenu() {
   }
   // user + logout footer
   const uf = document.createElement("div"); uf.className = "grp"; uf.textContent = "Hesap"; el.appendChild(uf);
-  const ui = document.createElement("div"); ui.style.cssText = "font-size:12px;color:var(--muted);padding:4px 8px"; ui.textContent = "👤 " + (USER?.name || USER?.email || ""); el.appendChild(ui);
+  const ui = document.createElement("div"); ui.style.cssText = "font-size:12px;color:var(--muted);padding:4px 8px"; ui.textContent = (ROLE_ICON[USER?.role] || "👤") + " " + (USER?.name || USER?.email || "") + (USER?.role ? " · " + USER.role : ""); el.appendChild(ui);
   const lo = document.createElement("a"); lo.textContent = "Çıkış"; lo.onclick = async () => { await api("/api/auth/logout", { method: "POST" }).catch(()=>{}); localStorage.removeItem("token"); renderLogin(); }; el.appendChild(lo);
   openDashboard();
 }

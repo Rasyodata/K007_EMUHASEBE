@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS _auth_user (
   email TEXT UNIQUE NOT NULL,
   name TEXT,
   pass TEXT NOT NULL,
+  role TEXT,
   created TEXT
 );
 CREATE TABLE IF NOT EXISTS _auth_session (

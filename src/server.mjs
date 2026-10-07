@@ -11,7 +11,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const UI = path.join(HERE, "ui");
 // Auth tables (_auth_user, _auth_session) are known to the store alongside module tables.
 const AUTH_TABLES = [
-  { name: "_auth_user", fields: [{ name: "id" }, { name: "email" }, { name: "name" }, { name: "pass" }, { name: "created" }] },
+  { name: "_auth_user", fields: [{ name: "id" }, { name: "email" }, { name: "name" }, { name: "pass" }, { name: "role", type: "text" }, { name: "created" }] },
   { name: "_auth_session", fields: [{ name: "id" }, { name: "user_id" }, { name: "created" }, { name: "expires" }] },
 ];
 const store = createStore([...TABLES, ...AUTH_TABLES]); // TABLES carry {name, fields} for column reconcile
@@ -44,13 +44,28 @@ function currentUser(req) {
   if (!s) return null;
   if (s.expires && Number(s.expires) < Date.now()) { store.remove("_auth_session", tok); return null; }
   const u = store.get("_auth_user", s.user_id);
-  return u ? { id: u.id, email: u.email, name: u.name } : null;
+  return u ? { id: u.id, email: u.email, name: u.name, role: u.role } : null;
 }
-// Seed a default admin on first boot so the app is immediately usable.
-if (store.list("_auth_user").length === 0) {
-  store.create("_auth_user", { email: "admin@local", name: "Yönetici", pass: hashPass("admin123"), created: new Date().toISOString() });
-  console.log("[auth] varsayılan kullanıcı: admin@local / admin123");
+
+// ---- TEST aşaması: şifresiz rol tabanlı giriş ----
+// AUTH_TEST_MODE=0 ile kapatılabilir (canlıya alırken kapatmayı unutma).
+const TEST_MODE = process.env.AUTH_TEST_MODE !== "0";
+const TEST_USERS = [
+  { email: "yonetici@emg",    name: "Yönetici",          role: "Yönetici" },
+  { email: "muhasebe@emg",    name: "Muhasebeci",        role: "Muhasebeci" },
+  { email: "santiyesefi@emg", name: "Şantiye Şefi",      role: "Şantiye Şefi" },
+  { email: "tekniker@emg",    name: "Tekniker",          role: "Tekniker" },
+  { email: "guvenlik@emg",    name: "Şantiye Güvenlik",  role: "Şantiye Güvenlik" },
+  { email: "sistem@emg",      name: "Sistem Yöneticisi", role: "Sistem Yöneticisi" },
+  { email: "taseron@emg",     name: "Taşeron",           role: "Taşeron" },
+];
+// İlk açılışta rol kullanıcılarını seed et; eksik rolleri de tamamla.
+for (const tu of TEST_USERS) {
+  if (!userByEmail(tu.email)) {
+    store.create("_auth_user", { email: tu.email, name: tu.name, role: tu.role, pass: hashPass("test"), created: new Date().toISOString() });
+  }
 }
+console.log("[auth] TEST modu " + (TEST_MODE ? "AÇIK — şifresiz rol girişi" : "KAPALI") + " · " + TEST_USERS.length + " rol kullanıcısı");
 
 function send(res, code, body, type = "application/json") {
   res.writeHead(code, { "Content-Type": type, "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type,Authorization" });
@@ -90,6 +105,22 @@ export const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/auth/me") {
     const u = currentUser(req);
     return u ? send(res, 200, { user: u }) : send(res, 401, { error: "oturum yok" });
+  }
+  // TEST: mevcut rol kullanıcılarını listele (giriş ekranı için).
+  if (url.pathname === "/api/auth/roles") {
+    if (!TEST_MODE) return send(res, 403, { error: "test girişi kapalı" });
+    const users = store.list("_auth_user")
+      .filter((u) => u.role)
+      .map((u) => ({ email: u.email, name: u.name, role: u.role }));
+    return send(res, 200, { testMode: true, users });
+  }
+  // TEST: şifresiz giriş — sadece e-posta ile oturum aç.
+  if (url.pathname === "/api/auth/quick-login" && req.method === "POST") {
+    if (!TEST_MODE) return send(res, 403, { error: "test girişi kapalı" });
+    const { email } = await readBody(req);
+    const u = userByEmail(email);
+    if (!u) return send(res, 404, { error: "kullanıcı bulunamadı" });
+    return send(res, 200, { token: newSession(u.id), user: { id: u.id, email: u.email, name: u.name, role: u.role } });
   }
 
   if (url.pathname === "/api/_meta") {
